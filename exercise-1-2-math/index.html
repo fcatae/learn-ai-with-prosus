@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seven Stars — Times Table Adventure!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Nunito', 'Segoe UI', sans-serif;
+      background: linear-gradient(145deg, #6c47c9 0%, #9b59b6 50%, #c96b9b 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* ── Screens ─────────────────────────────── */
+    .screen { display: none; flex-direction: column; align-items: center; gap: 18px; max-width: 460px; width: 100%; }
+    .screen.active { display: flex; }
+
+    /* ── Cards ───────────────────────────────── */
+    .card {
+      background: #fef9f0;
+      border-radius: 28px;
+      padding: 30px 26px 24px;
+      width: 100%;
+      box-shadow: 0 12px 44px rgba(0,0,0,.18);
+      text-align: center;
+    }
+
+    /* ── Typography ──────────────────────────── */
+    .title {
+      font-family: 'Fredoka One', cursive;
+      color: #4a2d7a;
+      font-size: 2.1em;
+      line-height: 1.2;
+    }
+    .subtitle {
+      color: #7a5ea8;
+      font-size: 1.05em;
+      font-weight: 700;
+      margin: 6px 0 18px;
+      line-height: 1.5;
+    }
+    .label {
+      color: #9e8bbf;
+      font-size: .85em;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .question {
+      font-family: 'Fredoka One', cursive;
+      font-size: 3.6em;
+      color: #4a2d7a;
+      margin: 6px 0 22px;
+    }
+
+    /* ── Buttons ─────────────────────────────── */
+    .btn-primary {
+      display: inline-block;
+      background: linear-gradient(135deg, #f5a623, #f05a28);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 16px 40px;
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.25em;
+      cursor: pointer;
+      box-shadow: 0 5px 18px rgba(240,90,40,.38);
+      transition: transform .15s, box-shadow .15s;
+    }
+    .btn-primary:hover  { transform: translateY(-3px); box-shadow: 0 9px 24px rgba(240,90,40,.5); }
+    .btn-primary:active { transform: translateY(1px); }
+
+    .btn-alt {
+      background: linear-gradient(135deg, #9b59b6, #5c3d91);
+      box-shadow: 0 5px 18px rgba(92,61,145,.4);
+    }
+    .btn-alt:hover { box-shadow: 0 9px 24px rgba(92,61,145,.55); }
+
+    /* ── HUD ─────────────────────────────────── */
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 12px 20px;
+      background: rgba(255,255,255,.18);
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+    }
+    .hud-lives  { font-size: 1.6em; letter-spacing: 5px; min-width: 80px; }
+    .hud-score  { font-family: 'Fredoka One', cursive; color: #fff; font-size: 1.35em; }
+    .hud-score span { color: #ffe066; }
+
+    /* ── Progress dots ───────────────────────── */
+    .dots { display: flex; gap: 7px; justify-content: center; flex-wrap: wrap; }
+    .dot {
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.28);
+      transition: background .3s, transform .2s;
+    }
+    .dot.done    { background: #ffe066; }
+    .dot.current { background: #fff; transform: scale(1.25); }
+
+    /* ── Answer buttons ──────────────────────── */
+    .answers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 13px;
+    }
+    .ans-btn {
+      background: white;
+      border: 3px solid #e4d6f5;
+      border-radius: 18px;
+      padding: 18px 10px;
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.85em;
+      color: #4a2d7a;
+      cursor: pointer;
+      transition: border-color .15s, transform .15s, box-shadow .15s;
+      box-shadow: 0 3px 10px rgba(0,0,0,.06);
+    }
+    .ans-btn:hover:not(:disabled) {
+      border-color: #9b59b6;
+      transform: translateY(-3px);
+      box-shadow: 0 8px 18px rgba(155,89,182,.22);
+    }
+    .ans-btn:active:not(:disabled) { transform: translateY(0); }
+    .ans-btn:disabled { cursor: default; }
+    .ans-btn.correct { background: #d6f5e3; border-color: #27ae60; color: #1a7a42; }
+    .ans-btn.wrong   { background: #fde8e8; border-color: #e74c3c; color: #b03030; }
+
+    /* ── Feedback ────────────────────────────── */
+    .feedback {
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.28em;
+      min-height: 36px;
+      margin-top: 14px;
+      transition: all .3s;
+    }
+    .feedback.ok  { color: #27ae60; }
+    .feedback.bad { color: #e74c3c; }
+
+    /* ── Onboarding rules ────────────────────── */
+    .rule {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      background: white;
+      border-radius: 16px;
+      padding: 13px 16px;
+      margin: 7px 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,.055);
+      text-align: left;
+    }
+    .rule-icon { font-size: 1.9em; flex-shrink: 0; }
+    .rule-text { color: #5a4270; font-weight: 700; font-size: .95em; line-height: 1.4; }
+
+    /* ── Big emoji ───────────────────────────── */
+    .big-emoji { font-size: 82px; line-height: 1; margin: 6px 0 10px; }
+
+    /* ── End screens ─────────────────────────── */
+    .final-score {
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.9em;
+      color: #f5a623;
+      margin: 12px 0 4px;
+    }
+    .tip-box {
+      background: #f3eeff;
+      border-radius: 14px;
+      padding: 12px 16px;
+      margin-top: 14px;
+      color: #7a5ea8;
+      font-size: .9em;
+      font-weight: 700;
+      line-height: 1.6;
+    }
+
+    /* ── Animations ──────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(22px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp .45s ease-out; }
+
+    @keyframes pop {
+      0%   { transform: scale(.6) rotate(-8deg); opacity: 0; }
+      65%  { transform: scale(1.18) rotate(4deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    .pop { animation: pop .38s ease-out; }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25%      { transform: translateX(-7px); }
+      75%      { transform: translateX(7px); }
+    }
+    .shake { animation: shake .35s ease-out; }
+
+    /* ── Confetti ────────────────────────────── */
+    #confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+    .cf {
+      position: absolute;
+      top: -24px;
+      font-size: 18px;
+      opacity: 0;
+      animation: cfFall var(--d) ease-in var(--delay) forwards;
+    }
+    @keyframes cfFall {
+      0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(105vh) rotate(780deg); opacity: 0; }
+    }
+
+    /* ── Table cheat-sheet ───────────────────── */
+    .cheatsheet {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .cs-cell {
+      background: white;
+      border-radius: 10px;
+      padding: 6px 4px;
+      font-size: .82em;
+      font-weight: 800;
+      color: #5c3d91;
+      box-shadow: 0 1px 4px rgba(0,0,0,.07);
+    }
+    .cs-cell.hl { background: #ffe8f7; color: #c2185b; }
+  </style>
+</head>
+<body>
+
+<div id="confetti"></div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  SCREEN 1 — ONBOARDING                    -->
+<!-- ══════════════════════════════════════════ -->
+<div class="screen active" id="s-intro">
+  <div class="card fade-up">
+    <div style="font-size:88px;line-height:1;margin-bottom:6px">⭐</div>
+    <div class="title">Seven Stars!</div>
+    <p class="subtitle">
+      A fun adventure with<br>
+      the <strong>7 times table</strong> 🚀
+    </p>
+
+    <div class="rule">
+      <div class="rule-icon">🔢</div>
+      <div class="rule-text">I'll ask a 7 times table question — pick the right answer!</div>
+    </div>
+    <div class="rule">
+      <div class="rule-icon">❤️❤️❤️</div>
+      <div class="rule-text">You have <strong>3 lives</strong>. Mistakes are okay — they help us learn!</div>
+    </div>
+    <div class="rule">
+      <div class="rule-icon">⭐</div>
+      <div class="rule-text">Every correct answer earns a <strong>gold star</strong>. Collect all 12!</div>
+    </div>
+    <div class="rule">
+      <div class="rule-icon">🏆</div>
+      <div class="rule-text">Answer all 12 questions without losing all your lives to win!</div>
+    </div>
+  </div>
+  <button class="btn-primary" onclick="startGame()">Let's Play! 🚀</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  SCREEN 2 — GAME                          -->
+<!-- ══════════════════════════════════════════ -->
+<div class="screen" id="s-game">
+  <div class="hud">
+    <div class="hud-lives" id="hud-lives">❤️❤️❤️</div>
+    <div class="hud-score">⭐ <span id="hud-score">0</span></div>
+  </div>
+
+  <div class="dots" id="dots"></div>
+
+  <div class="card fade-up" id="q-card">
+    <div class="label">What is…</div>
+    <div class="question" id="q-text">7 × ? = ?</div>
+    <div class="answers" id="q-answers"></div>
+    <div class="feedback" id="q-feedback"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  SCREEN 3 — WIN                           -->
+<!-- ══════════════════════════════════════════ -->
+<div class="screen" id="s-win">
+  <div class="card fade-up">
+    <div class="big-emoji">🏆</div>
+    <div class="title">You're a Star!</div>
+    <p class="subtitle">Amazing! You finished all 12 questions!</p>
+    <div class="final-score">Score: <span id="win-score">0</span> / 12 ⭐</div>
+    <p style="color:#7a5ea8;font-size:1em;margin-top:8px">
+      The 7 times table is <em>no match</em> for you! 🌟
+    </p>
+  </div>
+  <button class="btn-primary" onclick="resetGame()">Play Again! 🎉</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  SCREEN 4 — GAME OVER                     -->
+<!-- ══════════════════════════════════════════ -->
+<div class="screen" id="s-over">
+  <div class="card fade-up">
+    <div class="big-emoji">🌈</div>
+    <div class="title">Good try!</div>
+    <p class="subtitle">You earned <span id="over-score" style="color:#f5a623">0</span> stars!<br>Every try makes you better. 💪</p>
+
+    <div class="tip-box">
+      💡 <strong>Quick reminder:</strong>
+      <div class="cheatsheet" id="cheatsheet"></div>
+    </div>
+  </div>
+  <button class="btn-primary btn-alt" onclick="resetGame()">Try Again! 💪</button>
+</div>
+
+<script>
+  // ── State ─────────────────────────────────────
+  let qs = [], qi = 0, score = 0, lives = 3, locked = false;
+
+  // ── Build + shuffle questions ─────────────────
+  function buildQs() {
+    const arr = [];
+    for (let i = 1; i <= 12; i++) arr.push({ n: i, ans: 7 * i });
+    return shuffle(arr);
+  }
+
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // Distractors: pull 3 other genuine 7× answers so it tests real knowledge
+  function choices(correct) {
+    const all7 = Array.from({ length: 12 }, (_, i) => 7 * (i + 1));
+    const others = shuffle(all7.filter(v => v !== correct));
+    return shuffle([correct, ...others.slice(0, 3)]);
+  }
+
+  // ── Screen helper ──────────────────────────────
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  // ── Start / reset ─────────────────────────────
+  function startGame() {
+    qs = buildQs(); qi = 0; score = 0; lives = 3; locked = false;
+    buildDots();
+    show('s-game');
+    renderQ();
+  }
+
+  function resetGame() {
+    document.getElementById('confetti').innerHTML = '';
+    startGame();
+  }
+
+  // ── Progress dots ─────────────────────────────
+  function buildDots() {
+    const c = document.getElementById('dots');
+    c.innerHTML = '';
+    for (let i = 0; i < 12; i++) {
+      const d = document.createElement('div');
+      d.className = 'dot' + (i === 0 ? ' current' : '');
+      d.id = 'dot' + i;
+      c.appendChild(d);
+    }
+  }
+
+  function refreshDots() {
+    for (let i = 0; i < 12; i++) {
+      const d = document.getElementById('dot' + i);
+      d.className = 'dot' + (i < qi ? ' done' : i === qi ? ' current' : '');
+    }
+  }
+
+  // ── Render question ───────────────────────────
+  function renderQ() {
+    locked = false;
+    const q = qs[qi];
+    document.getElementById('q-text').textContent = `7 × ${q.n} = ?`;
+    document.getElementById('q-feedback').textContent = '';
+    document.getElementById('q-feedback').className = 'feedback';
+    document.getElementById('hud-score').textContent = score;
+    updateHearts();
+    refreshDots();
+
+    // Animate card
+    const card = document.getElementById('q-card');
+    card.classList.remove('fade-up');
+    void card.offsetWidth;
+    card.classList.add('fade-up');
+
+    // Answer buttons
+    const grid = document.getElementById('q-answers');
+    grid.innerHTML = '';
+    choices(q.ans).forEach(val => {
+      const b = document.createElement('button');
+      b.className = 'ans-btn';
+      b.textContent = val;
+      b.addEventListener('click', () => pick(val, q.ans, b));
+      grid.appendChild(b);
+    });
+  }
+
+  // ── Handle answer ─────────────────────────────
+  const okMsgs  = ['Awesome! 🌟', 'You got it! ⭐', 'Brilliant! 🎉', 'Super smart! 💫',
+                   'Yes! That\'s it! 🥳', 'Wonderful! ✨', 'Fantastic! 🚀', 'You rock! 🎸'];
+  const badMsgs = ['Oops! Keep going! 💪', 'Not quite — you\'ll get the next one! 🌈',
+                   'Almost! Keep it up! 🤞', 'Don\'t give up! 💖', 'Nice try! 🌟'];
+
+  function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function pick(chosen, correct, btn) {
+    if (locked) return;
+    locked = true;
+
+    const allBtns = document.querySelectorAll('.ans-btn');
+    allBtns.forEach(b => {
+      b.disabled = true;
+      if (+b.textContent === correct) b.classList.add('correct');
+    });
+
+    const fb = document.getElementById('q-feedback');
+
+    if (chosen === correct) {
+      score++;
+      btn.classList.add('correct', 'pop');
+      fb.textContent = rand(okMsgs);
+      fb.className = 'feedback ok';
+    } else {
+      lives--;
+      btn.classList.add('wrong', 'shake');
+      fb.textContent = rand(badMsgs) + `  The answer was ${correct}.`;
+      fb.className = 'feedback bad';
+      updateHearts();
+    }
+
+    setTimeout(() => {
+      qi++;
+      if (lives <= 0)   endGame(false);
+      else if (qi >= 12) endGame(true);
+      else               renderQ();
+    }, 1600);
+  }
+
+  // ── Hearts ────────────────────────────────────
+  function updateHearts() {
+    const h = ['', '❤️', '❤️❤️', '❤️❤️❤️'];
+    document.getElementById('hud-lives').textContent = h[Math.max(0, lives)];
+  }
+
+  // ── End game ──────────────────────────────────
+  function endGame(won) {
+    if (won) {
+      document.getElementById('win-score').textContent = score;
+      show('s-win');
+      confetti();
+    } else {
+      document.getElementById('over-score').textContent = score;
+      buildCheatsheet(qs[qi]?.n ?? null); // highlight the tricky one
+      show('s-over');
+    }
+  }
+
+  // ── Cheat-sheet in game-over ──────────────────
+  function buildCheatsheet(highlight) {
+    const c = document.getElementById('cheatsheet');
+    c.innerHTML = '';
+    for (let i = 1; i <= 12; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cs-cell' + (i === highlight ? ' hl' : '');
+      cell.textContent = `7×${i}=${7*i}`;
+      c.appendChild(cell);
+    }
+  }
+
+  // ── Confetti ──────────────────────────────────
+  function confetti() {
+    const box = document.getElementById('confetti');
+    box.innerHTML = '';
+    const symbols = ['⭐','🌟','✨','🎉','💫','🏆','🎊','❤️'];
+    const colors  = ['#f5a623','#9b59b6','#3498db','#e74c3c','#2ecc71','#f1c40f','#e91e63'];
+    for (let i = 0; i < 70; i++) {
+      const el = document.createElement('div');
+      el.className = 'cf';
+      el.textContent = Math.random() < .5
+        ? symbols[Math.floor(Math.random() * symbols.length)]
+        : '●';
+      if (el.textContent === '●') el.style.color = colors[Math.floor(Math.random() * colors.length)];
+      el.style.left  = Math.random() * 100 + 'vw';
+      el.style.setProperty('--d',     (1.4 + Math.random() * 2.2) + 's');
+      el.style.setProperty('--delay', (Math.random() * .9) + 's');
+      box.appendChild(el);
+    }
+    setTimeout(() => { box.innerHTML = ''; }, 5000);
+  }
+</script>
+</body>
+</html>
